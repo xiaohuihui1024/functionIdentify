@@ -87,85 +87,82 @@ def DealCode(filepath, dst_path):
     FileInfo = parse_filename(filename)
 
     if FileInfo:
-        if FileInfo['extension'] in ['c', 'cpp', 'h']:
-            # 解析所有函数位置
-            allLoctionInfo = parse_function_lines(filepath)
-            # 不能放到后边，路径问题
-            f = readFile(filepath)
-            # 将处理结果存到dst_path下，首先创建相关的文件夹
-            if not os.path.exists(dst_path):
-                os.mkdir(dst_path)
-            os.chdir(dst_path)
-            # 创建第一级目录
-            if not os.path.exists(FileInfo['cve_id']):
-                os.mkdir(FileInfo['cve_id'])
-            os.chdir(FileInfo['cve_id'])
-            # 创建第二级目录
-            if not os.path.exists(FileInfo['git_name'] + '-' +FileInfo['hash']):
-                os.mkdir(FileInfo['git_name'] + '-' + FileInfo['hash'])
-            os.chdir(FileInfo['git_name'] + '-' + FileInfo['hash'])
+        # 解析所有函数位置
+        allLoctionInfo = parse_function_lines(filepath)
+        # 不能放到后边，路径问题
+        f = readFile(filepath)
+        # 将处理结果存到dst_path下，首先创建相关的文件夹
+        if not os.path.exists(dst_path):
+            os.mkdir(dst_path)
+        os.chdir(dst_path)
+        # 创建第一级目录
+        if not os.path.exists(FileInfo['cve_id']):
+            os.mkdir(FileInfo['cve_id'])
+        os.chdir(FileInfo['cve_id'])
+        # 创建第二级目录
+        if not os.path.exists(FileInfo['git_name'] + '-' +FileInfo['hash']):
+            os.mkdir(FileInfo['git_name'] + '-' + FileInfo['hash'])
+        os.chdir(FileInfo['git_name'] + '-' + FileInfo['hash'])
 
 
-            # 首先存一份原始文件，编码为utf-8
-            with open(filename, 'w+', encoding='utf-8') as nf:
-                nf.write(f.read())
-                nf.close()
-            # 之前read过了，需要将指针回退到起始位置
-            f.seek(0)
+        # 首先存一份原始文件，编码为utf-8
+        with open(filename, 'w+', encoding='utf-8') as nf:
+            nf.write(f.read())
+            nf.close()
+        # 之前read过了，需要将指针回退到起始位置
+        f.seek(0)
 
-            # 目录初始化完毕，开始处理数据
-            # 读取代码文件，把每一行存到list中
-            codes = f.readlines()
-            print('start dealing... ', filename)
+        # 目录初始化完毕，开始处理数据
+        # 读取代码文件，把每一行存到list中
+        codes = f.readlines()
+        print('start dealing... ', filename)
 
 
-            # 提取出 include和 define
-            include_lines = get_include_lines(codes)
+        # 提取出 include和 define
+        include_lines = get_include_lines(codes)
 
-            # 根据文件名中的 行数 依次查找
-            target_lines = FileInfo['lines'].split('-')
-            for target_line in target_lines:
-                # TODO：根据patch内容判断是否添加，后期加入
-                # 每次查找都从头到尾遍历一遍
-                flag = False # 默认为没找到
-                for loctionInfo in allLoctionInfo:
-                    try:
-                        # TODO:如果可以确保dict中数据为int，可以去掉
-                        startLine = int(loctionInfo['startLine'])
-                        endLine = int(loctionInfo['endLine'])
-                        t_line = int(target_line) + 3
-                        if startLine <= t_line <= endLine:
-                            # 找到了
-                            flag = True
-                            with open('%s_%s_%s.%s'%(target_line, loctionInfo['functionName'], FileInfo['filename'], FileInfo['extension']),'w+',encoding='utf-8') as tf:
-                                # 写入include，define
-                                for include_line in include_lines:
-                                    tf.write(include_line)
-                                # 写入相关代码
-                                for i in range(startLine, endLine+1):
-                                    tf.write(codes[i-1])
-                                tf.close()
-                    except IndexError as ie:
-                        print('IndexError：', ie)
-                    except Exception as e:
-                        with open('../../errorMsg.txt','a+',encoding='utf-8') as ef:
-                            ef.write('FileName: %s\nLine:%d\n'%(filename,loctionInfo['startLine']))
-                            ef.write(str(e))
-                            ef.write('\n\n')
-                            ef.close()
-                        print('FileName: %s\nLine:%d\n\n'%(filename,loctionInfo['startLine']))
-                        print(e)
-                if not flag:
-                    # 没找到
-                    with open('%s_%s_%s.%s' % (
-                    target_line, 'notfun', FileInfo['filename'], FileInfo['extension']), 'a+',
-                              encoding='utf-8') as tf:
-                        tf.close()
-            f.close()
-            # 必须！回退！
-            os.chdir('../../../')
-        else:
-            print('不支持 %s 文件拓展名' % FileInfo['extension'])
+        # 根据文件名中的 行数 依次查找
+        target_lines = FileInfo['lines'].split('-')
+        for target_line in target_lines:
+            # TODO：根据patch内容判断是否添加，后期加入
+            # 每次查找都从头到尾遍历一遍
+            flag = False # 默认为没找到
+            for loctionInfo in allLoctionInfo:
+                try:
+                    # TODO:如果可以确保dict中数据为int，可以去掉
+                    startLine = int(loctionInfo['startLine'])
+                    endLine = int(loctionInfo['endLine'])
+                    t_line = int(target_line) + 3
+                    if startLine <= t_line <= endLine:
+                        # 找到了
+                        flag = True
+                        with open('%s_%s_%s.%s'%(target_line, loctionInfo['functionName'], FileInfo['filename'], FileInfo['extension']),'w+',encoding='utf-8') as tf:
+                            # 写入include，define
+                            for include_line in include_lines:
+                                tf.write(include_line)
+                            # 写入相关代码
+                            for i in range(startLine, endLine+1):
+                                tf.write(codes[i-1])
+                            tf.close()
+                except IndexError as ie:
+                    print('IndexError：', ie)
+                except Exception as e:
+                    with open('../../errorMsg.txt','a+',encoding='utf-8') as ef:
+                        ef.write('FileName: %s\nLine:%d\n'%(filename,loctionInfo['startLine']))
+                        ef.write(str(e))
+                        ef.write('\n\n')
+                        ef.close()
+                    print('FileName: %s\nLine:%d\n\n'%(filename,loctionInfo['startLine']))
+                    print(e)
+            if not flag:
+                # 没找到
+                with open('%s_%s_%s.%s' % (
+                target_line, 'notfun', FileInfo['filename'], FileInfo['extension']), 'a+',
+                          encoding='utf-8') as tf:
+                    tf.close()
+        f.close()
+        # 必须！回退！
+        os.chdir('../../../')
     else:
         print('文件名格式有误 %s' % filename)
 
